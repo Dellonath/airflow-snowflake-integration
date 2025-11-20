@@ -37,6 +37,6 @@ for file in os.listdir(YAML_CONFIGS_PATH):
 
         # setting dependencies between tasks
         for task_id in tasks_lookup.keys():
-            if 'depends' in tasks_lookup.get(task_id):
-                tasks[task_id] >> [tasks.get(id_) for id_ in tasks_lookup.get(task_id).get('depends')]
+            if 'depends_on' in tasks_lookup.get(task_id):
+                tasks[task_id] >> [tasks.get(id_) for id_ in tasks_lookup.get(task_id).get('depends_on')]
         

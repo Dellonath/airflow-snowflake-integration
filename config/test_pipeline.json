@@ -23,7 +23,7 @@
                 "host": "vadasdasdas/asdasd",
                 "username": "douglas"
             },
-            "depends": [
+            "depends_on": [
                 1
             ]
         },
@@ -35,7 +35,7 @@
                 "host": "vadasdasdas/asdasd",
                 "username": "douglas"
             },
-            "depends": [
+            "depends_on": [
                 1
             ]
         },
@@ -47,7 +47,7 @@
                 "host": "vadasdasdas/asdasd",
                 "username": "douglas"
             },
-            "depends": [
+            "depends_on": [
                 2,
                 3
             ]
