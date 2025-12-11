@@ -1,42 +1,36 @@
 import os
 import json
-import datetime as datetime
 from airflow import DAG
-from airflow.operators.bash import BashOperator
-from airflow.operators.python import PythonOperator
-from scripts.database import Database
+from airflow.providers.standard.operators.bash import BashOperator
+from airflow.providers.standard.operators.python import PythonOperator
+from scripts.database import DatabaseConnector
 
-YAML_CONFIGS_PATH = 'config'
-SCRIPTS = {
-    'scripts/database.py': Database().run
+YAML_CONFIGS_PATH = 'dags/configs'
+
+# add any new script here, poiting the path and the callable function
+SCRIPTS: dict[str, callable] = {
+    'dags/scripts/database.py': DatabaseConnector.handler
 }
 
 for file in os.listdir(YAML_CONFIGS_PATH):
-
     with open(f'{YAML_CONFIGS_PATH}/{file}', 'r') as f:
-        cfg = json.load(f)
-
+        dag_cfg = json.load(f)
     with DAG(
         dag_id=file.split('.')[0],
-        schedule=cfg.get('schedule'),
-        tags=cfg.get('tags'),
-        default_args=cfg.get('default_args'),
-        catchup=False
+        catchup=False,
+        schedule=dag_cfg.get('schedule'),
+        tags=dag_cfg.get('tags'),
+        default_args=dag_cfg.get('default_args'),
     ) as dag:
         tasks = {}
-        tasks_lookup = {task['id']: task for task in cfg.get('tasks', [])}
-        for task_id, task_cfg in tasks_lookup.items():
-            task_name = task_cfg.get('name')
-            task_script = task_cfg.get('script')
-            task_params = task_cfg.get('params')
-            tasks[task_id] = PythonOperator(
-                task_id=task_name,
-                python_callable=SCRIPTS.get(task_script),
-                op_kwargs=task_params
+        tasks_definition = {task['id']: task for task in dag_cfg.get('tasks', [])}
+        for dag_task_id, dag_task_cfg in tasks_definition.items():
+            tasks[dag_task_id] = PythonOperator(
+                task_id=dag_task_cfg.get('name'),
+                python_callable=SCRIPTS.get(dag_task_cfg.get('script')),
+                op_kwargs=dag_task_cfg.get('params')
             )
-
         # setting dependencies between tasks
-        for task_id in tasks_lookup.keys():
-            if 'depends_on' in tasks_lookup.get(task_id):
-                tasks[task_id] >> [tasks.get(id_) for id_ in tasks_lookup.get(task_id).get('depends_on')]
-        
+        for dag_task_id in tasks_definition.keys():
+            if 'depends_on' in tasks_definition.get(dag_task_id):
+                tasks[dag_task_id] << [tasks.get(id_) for id_ in tasks_definition.get(dag_task_id).get('depends_on')]

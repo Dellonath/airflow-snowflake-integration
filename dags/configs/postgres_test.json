@@ -1,24 +1,27 @@
 {
-    "dag_id": "example_dynamic_dag",
     "schedule": "@daily",
     "default_args": {
-        "owner": "data-eng",
+        "owner": "douglas-oliveira",
         "start_date": "2024-01-01"
     },
+    "tags": [
+        "postgres",
+        "test"
+    ],
     "tasks": [
         {
             "id": 1,
-            "name": "extract",
-            "script": "scripts/database.py",
+            "name": "database_1",
+            "script": "dags/scripts/database.py",
             "params": {
-                "host": "vadasdasdas/asdasd",
-                "username": "douglas"
+                "dbcreds": "database-postgres",
+                "query": "SELECT ID, Car_Name, Car_Type FROM Car.Chassis"
             }
         },
         {
             "id": 2,
             "name": "middle_1",
-            "script": "scripts/database.py",
+            "script": "dags/scripts/database.py",
             "params": {
                 "host": "vadasdasdas/asdasd",
                 "username": "douglas"
@@ -30,7 +33,7 @@
         {
             "id": 3,
             "name": "middle_2",
-            "script": "scripts/database.py",
+            "script": "dags/scripts/database.py",
             "params": {
                 "host": "vadasdasdas/asdasd",
                 "username": "douglas"
@@ -42,7 +45,7 @@
         {
             "id": 4,
             "name": "load",
-            "script": "scripts/database.py",
+            "script": "dags/scripts/database.py",
             "params": {
                 "host": "vadasdasdas/asdasd",
                 "username": "douglas"
@@ -52,9 +55,5 @@
                 3
             ]
         }
-    ],
-    "tags": [
-        "test1",
-        "test2"
     ]
 }

@@ -1,0 +1,16 @@
+[database-postgres]
+drivername = "postgresql+psycopg2"
+host = "host.docker.internal" # used for local database connection
+username = "postgres"
+password = "admin"
+database = "postgres"
+port = 5433
+
+[database-mysql]
+drivername = "mysql+pymysql"
+host = 'host.docker.internal' # used for local database connection
+username = 'root'
+password = 'admin'
+database = 'mysql'
+port = 3306
+
