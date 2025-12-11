@@ -6,53 +6,54 @@
     },
     "tags": [
         "postgres",
-        "test"
+        "mysql",
+        "database"
     ],
     "tasks": [
         {
-            "id": 1,
-            "name": "database_1",
-            "script": "dags/scripts/database.py",
+            "name": "database-extraction-postgres",
+            "script": "dags/src/models/database.py",
             "params": {
                 "dbcreds": "database-postgres",
-                "query": "SELECT ID, Car_Name, Car_Type FROM Car.Chassis"
+                "sql": "SELECT * FROM Chassis.Car",
+                "output": "dags/data/bronze/chassis_car.csv",
+                "file_format": "csv"
             }
         },
         {
-            "id": 2,
-            "name": "middle_1",
-            "script": "dags/scripts/database.py",
+            "name": "postgres-snowflake",
+            "script": "dags/src/models/snowflake.py",
             "params": {
-                "host": "vadasdasdas/asdasd",
-                "username": "douglas"
+                "dbcreds": "snowflake-connection",
+                "sql": "SELECT 1"
             },
             "depends_on": [
-                1
+                "database-extraction-postgres"
             ]
         },
         {
-            "id": 3,
-            "name": "middle_2",
-            "script": "dags/scripts/database.py",
+            "name": "database-extraction-mysql",
+            "script": "dags/src/models/database.py",
             "params": {
-                "host": "vadasdasdas/asdasd",
-                "username": "douglas"
-            },
-            "depends_on": [
-                1
-            ]
+                "dbcreds": "database-mysql",
+                "sql": "SELECT * FROM dellocred_crm.clients",
+                "output": "dags/data/bronze/crm_clients.parquet"
+            }
         },
         {
-            "id": 4,
-            "name": "load",
-            "script": "dags/scripts/database.py",
+            "name": "mysql-snowflake",
+            "script": "dags/src/models/snowflake.py",
             "params": {
-                "host": "vadasdasdas/asdasd",
-                "username": "douglas"
+                "dbcreds": "snowflake-connection",
+                "sql": "dags/src/scripts/test.sql",
+                "sql_params": {
+                    "database": "sandbox",
+                    "schema": "oliveirad",
+                    "table": "test"
+                }
             },
             "depends_on": [
-                2,
-                3
+                "database-extraction-mysql"
             ]
         }
     ]

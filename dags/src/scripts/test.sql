@@ -1,0 +1,1 @@
+CREATE OR REPLACE TABLE {{database}}.{{schema}}.{{table}} AS SELECT 1 ID;

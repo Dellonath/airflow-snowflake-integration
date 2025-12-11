@@ -3,3 +3,4 @@ SQLAlchemy==1.4.54
 dotenv==0.9.9
 pandas==2.3.3
 airflow-provider-iris==0.2.8
+apache-airflow-providers-common-sql==1.30.0

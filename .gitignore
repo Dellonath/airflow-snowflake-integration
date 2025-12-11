@@ -146,6 +146,7 @@ venv.bak/
 
 # DB Secrets
 dbcreds.toml
+*.creds
 
 # Spyder project settings
 .spyderproject
