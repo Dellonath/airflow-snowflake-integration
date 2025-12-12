@@ -4,16 +4,16 @@ from airflow import DAG
 from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from src.models.database import DatabaseConnector
-from src.models.snowflake import SnowflakeConnector
+# from src.models.database import DatabaseConnector
+# from src.models.snowflake import SnowflakeConnector
 
 YAML_CONFIGS_PATH: str = 'dags/configs'
 
-# add any new script here, poiting the path and the callable function
-SCRIPTS: dict[str, callable] = {
-    'dags/src/models/database.py': DatabaseConnector.handler,
-    'dags/src/models/snowflake.py': SnowflakeConnector.handler
-}
+# # add any new script here, poiting the path and the callable function
+# SCRIPTS: dict[str, callable] = {
+#     'dags/src/models/database.py': DatabaseConnector.handler,
+#     'dags/src/models/snowflake.py': SnowflakeConnector.handler
+# }
 
 for file in os.listdir(YAML_CONFIGS_PATH):
     with open(f'{YAML_CONFIGS_PATH}/{file}', 'r') as f:
@@ -28,10 +28,14 @@ for file in os.listdir(YAML_CONFIGS_PATH):
         tasks: dict = {}
         tasks_definition: dict = {task['name']: task for task in dag_cfg.get('tasks', [])}
         for dag_task_name, dag_task_cfg in tasks_definition.items():
-            tasks[dag_task_name] = PythonOperator(
+            # tasks[dag_task_name] = PythonOperator(
+            #     task_id=dag_task_cfg.get('name'),
+            #     python_callable=SCRIPTS.get(dag_task_cfg.get('script')),
+            #     op_kwargs=dag_task_cfg.get('params')
+            # )
+            tasks[dag_task_name] = BashOperator(
                 task_id=dag_task_cfg.get('name'),
-                python_callable=SCRIPTS.get(dag_task_cfg.get('script')),
-                op_kwargs=dag_task_cfg.get('params')
+                bash_command=f'python3 $AIRFLOW_HOME/dags/src/models/database.py {' '.join([f"--{key} '{value}'" for key, value in dag_task_cfg.get('params').items()])}'
             )
         # setting dependencies between tasks
         for dag_task_name in tasks_definition.keys():

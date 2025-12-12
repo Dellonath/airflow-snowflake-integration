@@ -1,0 +1,34 @@
+{
+    "schedule": "@daily",
+    "default_args": {
+        "owner": "douglas-oliveira",
+        "start_date": "2024-01-01"
+    },
+    "tags": [
+        "postgres",
+        "mysql",
+        "database"
+    ],
+    "tasks": [
+        {
+            "name": "database-extraction-postgres",
+            "script": "dags/src/models/database.py",
+            "params": {
+                "dbcreds": "database-postgres",
+                "sql": "SELECT * FROM Chassis.Car",
+                "output": "dags/data/bronze/chassis_car",
+                "file_format": "csv"
+            }
+        },
+        {
+            "name": "database-extraction-mysql",
+            "script": "dags/src/models/database.py",
+            "params": {
+                "dbcreds": "database-mysql",
+                "sql": "SELECT * FROM dellocred_crm.clients",
+                "output": "dags/data/bronze/crm_clients",
+                "file_format": "csv"
+            }
+        }
+    ]
+}
