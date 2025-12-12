@@ -8,3 +8,8 @@ CREATE FILE FORMAT IF NOT EXISTS {{database}}.{{schema}}.CSV_SCHEMA_EVOLUTION
     FIELD_OPTIONALLY_ENCLOSED_BY = '"'
     ESCAPE_UNENCLOSED_FIELD = NONE
     ERROR_ON_COLUMN_COUNT_MISMATCH=false;
+
+CREATE STAGE IF NOT EXISTS @{{database}}.{{schema}}.{{table}}
+    FILE_FORMAT={{file_format}}_SCHEMA_EVOLUTION;
+
+PUT {{path}}* @{{database}}.{{schema}}.{{table}};

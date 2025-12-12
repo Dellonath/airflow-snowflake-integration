@@ -1,11 +1,11 @@
 import logging
-from enum import Enum
 import datetime
-import pandas as pd
+from pathlib import Path
 from typing import Iterator
+from enum import Enum
+import pandas as pd
 from dataclasses import dataclass
 from sqlalchemy import create_engine, engine
-from pathlib import Path
 from ..utils.load_toml_creds import load_toml_creds
 
 class DatabaseDriverName(Enum):
@@ -38,7 +38,6 @@ def now():
     return datetime.datetime.now()
 
 def establish_database_connection(db_conn_creds: DatabaseConnectionCredentials) -> create_engine:
-
     if db_conn_creds.drivername in (DatabaseDriverName.MYSQL.value, DatabaseDriverName.POSTGRES.value):
         db_engine: create_engine = create_engine(url=engine.URL.create(
             drivername=db_conn_creds.drivername,
@@ -54,7 +53,7 @@ def establish_database_connection(db_conn_creds: DatabaseConnectionCredentials) 
 
     return db_engine
 
-def save(dataframe: pd.DataFrame, output: Path, file_name: str) -> None:
+def save_extraction_file(dataframe: pd.DataFrame, output: Path, file_name: str) -> None:
     output.mkdir(parents=True, exist_ok=True)
     file_format = file_name.split('.')[-1]
     if file_format == FileFormat.PARQUET.value:
@@ -75,27 +74,23 @@ def extract_from_database(db_task_params: DatabaseTaskParameters, con: create_en
     for i, chunk in enumerate(data_iterator):
         # only add suffix if we are actually chunking
         suffix = f'_{i}' if db_task_params.chunk_size else ''
-        save(
+        save_extraction_file(
             dataframe=chunk,
             output=db_task_params.output,
             file_name=f"{extraction_ts}{suffix}.{db_task_params.file_format}"
         )
 
-
-class DatabaseConnector:
-
-    @staticmethod
-    def handler(dbcreds: str, sql: str, output: Path, file_format: FileFormat = FileFormat.PARQUET.value, chunk_size: int | None = None) -> None:
-        db_task_params: DatabaseTaskParameters = DatabaseTaskParameters(
-            dbcreds=dbcreds,
-            sql=sql,
-            output=Path(output),
-            file_format=file_format,
-            chunk_size=chunk_size
+def handler(dbcreds: str, sql: str, output: Path, file_format: FileFormat = FileFormat.PARQUET.value, chunk_size: int | None = None) -> None:
+    db_task_params: DatabaseTaskParameters = DatabaseTaskParameters(
+        dbcreds=dbcreds,
+        sql=sql,
+        output=Path(output),
+        file_format=file_format,
+        chunk_size=chunk_size
+    )
+    db_connection: create_engine = establish_database_connection(
+        DatabaseConnectionCredentials(
+            **load_toml_creds().get(db_task_params.dbcreds)
         )
-        db_connection: create_engine = establish_database_connection(
-            DatabaseConnectionCredentials(
-                **load_toml_creds().get(db_task_params.dbcreds)
-            )
-        )
-        extract_from_database(db_task_params=db_task_params, con=db_connection)
+    )
+    extract_from_database(db_task_params=db_task_params, con=db_connection)

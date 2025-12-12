@@ -12,7 +12,7 @@
     "tasks": [
         {
             "name": "database-extraction-postgres",
-            "script": "dags/src/models/database.py",
+            "script": "src.models.database.handler",
             "params": {
                 "dbcreds": "database-postgres",
                 "sql": "SELECT * FROM Chassis.Car",
@@ -22,7 +22,7 @@
         },
         {
             "name": "postgres-snowflake",
-            "script": "dags/src/models/snowflake.py",
+            "script": "src.models.snowflake.handler",
             "params": {
                 "dbcreds": "snowflake-connection",
                 "sql": "SELECT 1"
@@ -33,24 +33,26 @@
         },
         {
             "name": "database-extraction-mysql",
-            "script": "dags/src/models/database.py",
+            "script": "src.models.database.handler",
             "params": {
                 "dbcreds": "database-mysql",
                 "sql": "SELECT * FROM dellocred_crm.clients",
                 "output": "dags/data/bronze/crm_clients",
-                "file_format": "csv"
+                "file_format": "csv",
+                "chunk_size": 3
             }
         },
         {
             "name": "mysql-snowflake",
-            "script": "dags/src/models/snowflake.py",
+            "script": "src.models.snowflake.handler",
             "params": {
                 "dbcreds": "snowflake-connection",
-                "sql": "dags/src/scripts/common/test.sql",
+                "sql": "dags/src/scripts/common/setup_snowflake.sql",
                 "sql_params": {
                     "database": "sandbox",
                     "schema": "oliveirad",
-                    "table": "test"
+                    "table": "test",
+                    "path": "dags/data/bronze/crm_clients"
                 }
             },
             "depends_on": [

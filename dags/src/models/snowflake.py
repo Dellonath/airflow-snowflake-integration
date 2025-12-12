@@ -2,14 +2,14 @@ import logging
 from typing import Any
 import snowflake.connector
 from snowflake.connector.pandas_tools import write_pandas
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from ..utils.load_toml_creds import load_toml_creds
 
 @dataclass
 class SnowflakeTaskParameters:
     dbcreds: str
     sql: str
-    sql_params: dict[str, Any] | None = field(default=None)
+    sql_params: dict[str, Any] | None
 
 @dataclass
 class SnowflakeConnectionCredentials:
@@ -40,20 +40,18 @@ def format_sql(sql: str, sql_params: dict[str, Any] | None) -> None:
             sql = sql.replace(f'{{{{{param}}}}}', value)
     return sql
 
-class SnowflakeConnector:
+def handler(dbcreds: str, sql: str, sql_params: dict[str, Any] | None = None) -> None:
+    sf_task_params: SnowflakeTaskParameters = SnowflakeTaskParameters(
+        dbcreds=dbcreds,
+        sql=sql,
+        sql_params=sql_params
+    )
 
-    @staticmethod
-    def handler(dbcreds: str, sql: str, sql_params: dict[str, Any] | None = None, *args, **kwargs) -> None:
-        sf_task_params: SnowflakeTaskParameters = SnowflakeTaskParameters(
-            dbcreds=dbcreds,
-            sql=sql
-        )
+    sql = format_sql(sql=sql, sql_params=sql_params)
 
-        sql = format_sql(sql=sql, sql_params=sql_params)
+    sf_connection = snowflake.connector.connect(
+        **load_toml_creds().get(sf_task_params.dbcreds),
+        client_session_keep_alive=True
+    )
 
-        sf_connection = snowflake.connector.connect(
-            **load_toml_creds().get(sf_task_params.dbcreds),
-            client_session_keep_alive=True
-        )
-
-        execute_query(conn=sf_connection, sql=sql)
+    execute_query(conn=sf_connection, sql=sql)
