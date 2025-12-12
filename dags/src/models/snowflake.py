@@ -1,9 +1,9 @@
 import logging
 from typing import Any
 import snowflake.connector
+from snowflake.connector.pandas_tools import write_pandas
 from dataclasses import dataclass, field
 from ..utils.load_toml_creds import load_toml_creds
-
 
 @dataclass
 class SnowflakeTaskParameters:
