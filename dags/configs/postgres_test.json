@@ -16,7 +16,7 @@
             "params": {
                 "dbcreds": "database-postgres",
                 "sql": "SELECT * FROM Chassis.Car",
-                "output": "dags/data/bronze/chassis_car.csv",
+                "output": "dags/data/bronze/chassis_car",
                 "file_format": "csv"
             }
         },
@@ -37,7 +37,8 @@
             "params": {
                 "dbcreds": "database-mysql",
                 "sql": "SELECT * FROM dellocred_crm.clients",
-                "output": "dags/data/bronze/crm_clients.parquet"
+                "output": "dags/data/bronze/crm_clients",
+                "file_format": "csv"
             }
         },
         {
@@ -45,7 +46,7 @@
             "script": "dags/src/models/snowflake.py",
             "params": {
                 "dbcreds": "snowflake-connection",
-                "sql": "dags/src/scripts/test.sql",
+                "sql": "dags/src/scripts/common/test.sql",
                 "sql_params": {
                     "database": "sandbox",
                     "schema": "oliveirad",

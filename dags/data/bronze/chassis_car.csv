@@ -1,4 +1,0 @@
-car_id,make,model,year,color,chassis_serial_num,created_at
-1,Toyota,Corolla,2022,Blue,VIN12345ABCDE,2025-12-10 18:20:43.751323+00:00
-2,Honda,Civic,2023,Red,VIN67890FGHIJ,2025-12-10 18:20:43.751323+00:00
-3,Ford,F-150,2021,Black,VIN11223KKLLM,2025-12-10 18:20:43.751323+00:00

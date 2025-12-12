@@ -43,18 +43,17 @@ def format_sql(sql: str, sql_params: dict[str, Any] | None) -> None:
 class SnowflakeConnector:
 
     @staticmethod
-    def handler(dbcreds: str, sql: str, sql_params: dict[str, Any] | None = None) -> None:
-        _sf_task_params: SnowflakeTaskParameters = SnowflakeTaskParameters(
+    def handler(dbcreds: str, sql: str, sql_params: dict[str, Any] | None = None, *args, **kwargs) -> None:
+        sf_task_params: SnowflakeTaskParameters = SnowflakeTaskParameters(
             dbcreds=dbcreds,
             sql=sql
         )
-        sf_conn_params: dict = load_toml_creds().get(_sf_task_params.dbcreds)
 
         sql = format_sql(sql=sql, sql_params=sql_params)
 
-        _sf_connection = snowflake.connector.connect(
-            **sf_conn_params,
+        sf_connection = snowflake.connector.connect(
+            **load_toml_creds().get(sf_task_params.dbcreds),
             client_session_keep_alive=True
         )
 
-        execute_query(conn=_sf_connection, sql=sql)
+        execute_query(conn=sf_connection, sql=sql)

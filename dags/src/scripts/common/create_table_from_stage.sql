@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS {{database}}.{{schema}}.{{table}}
         SELECT ARRAY_AGG(OBJECT_CONSTRUCT(*))
         FROM TABLE(
             INFER_SCHEMA(
-                LOCATION=>'@{{schema}}.{{table}}',
+                LOCATION=>'@{{database}}.{{schema}}.{{table}}',
                 FILE_FORMAT=>'{{file_format}}',
                 IGNORE_CASE=>false
             )
