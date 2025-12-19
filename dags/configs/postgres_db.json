@@ -2,10 +2,11 @@
     "schedule": "@daily",
     "default_args": {
         "owner": "douglas-oliveira",
+        "file_format": "parquet",
+        "database": "Chassis",
+        "dbcreds": "database-postgres",
         "sqls_path": "dags/src/scripts/common",
-        "bronze_path": "dags/data/bronze",
-        "file_format": "csv",
-        "chunk_size": 3
+        "bronze_path": "dags/data/bronze"
     },
     "tags": [
         "postgres",
@@ -17,10 +18,8 @@
             "name": "database-extraction-postgres",
             "script": "src.models.database.handler",
             "params": {
-                "dbcreds": "database-postgres",
-                "sql": "SELECT * FROM Chassis.Car",
-                "output": "dags/data/bronze/chassis_car",
-                "file_format": "csv"
+                "sql": "SELECT * FROM {{database}}.Car",
+                "output": "{{bronze_path}}/chassis_car"
             }
         },
         {
@@ -48,11 +47,11 @@
             "script": "src.models.snowflake.handler",
             "params": {
                 "dbcreds": "snowflake-connection",
-                "sql": "{{sqls_path}}/test.sql",
+                "sql": "{{sqls_path}}/setup_snowflake.sql",
                 "sql_params": {
                     "database": "sandbox",
                     "schema": "oliveirad",
-                    "table": "clients",
+                    "table": "test",
                     "path": "{{bronze_path}}/crm_clients"
                 }
             },

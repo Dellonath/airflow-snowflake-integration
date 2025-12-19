@@ -1,10 +1,10 @@
 import logging
-import datetime
-from pathlib import Path
+from datetime import datetime
 from typing import Iterator
+from pydantic import ConfigDict, dataclasses, Field
+from pathlib import Path
 from enum import Enum
 import pandas as pd
-from dataclasses import dataclass
 from sqlalchemy import create_engine, engine
 from ..utils.load_toml_creds import load_toml_creds
 
@@ -17,80 +17,80 @@ class FileFormat(Enum):
     PARQUET = 'parquet'
     CSV = 'csv'
 
-@dataclass
-class DatabaseTaskParameters:
-    dbcreds: str
-    sql: str
-    output: Path
-    file_format: FileFormat
-    chunk_size: int
-
-@dataclass
+@dataclasses.dataclass
 class DatabaseConnectionCredentials:
-    drivername: DatabaseDriverName
-    host: str
-    username: str
-    password: str
-    port: int
-    database: str
+    drivername: DatabaseDriverName = Field(description='Driver name to identify the database driver')
+    host: str = Field(description='Database host')
+    username: str = Field(description='Database username')
+    password: str = Field(description='Database username password')
+    port: int = Field(description='Database port')
+    database: str | None = Field(default=None, description='Database to be used in during connection runtime')
 
-def now():
-    return datetime.datetime.now()
+@dataclasses.dataclass(config=ConfigDict(extra='ignore'))
+class TaskParameters:
+    sql: str = Field(description='Query or the SQL file path to be executed')
+    dbcreds: str = Field(description='Database connection section name in TOML file. With all necessary parameters for connection')
+    data_interval_start: datetime = Field(description='The start interval of the Dag execution')
+    output: Path = Field(default_factory=Path, description='Extraction files path where the files will be saved')
+    file_format: FileFormat = Field(default=FileFormat.PARQUET, description='Extraction files format')
+    chunk_size: int | None = Field(default=None, description='Size (number of records) of each chunk/file during the extraction')
 
-def establish_database_connection(db_conn_creds: DatabaseConnectionCredentials) -> create_engine:
-    if db_conn_creds.drivername in (DatabaseDriverName.MYSQL.value, DatabaseDriverName.POSTGRES.value):
+def establish_database_connection(db_creds: DatabaseConnectionCredentials) -> create_engine:
+    if db_creds.drivername in (DatabaseDriverName.MYSQL, DatabaseDriverName.POSTGRES):
         db_engine: create_engine = create_engine(url=engine.URL.create(
-            drivername=db_conn_creds.drivername,
-            host=db_conn_creds.host,
-            username=db_conn_creds.username,
-            password=db_conn_creds.password,
-            port=db_conn_creds.port,
-            database=db_conn_creds.database
+            drivername=db_creds.drivername.value,
+            host=db_creds.host,
+            username=db_creds.username,
+            password=db_creds.password,
+            port=db_creds.port,
+            database=db_creds.database
         )).connect().connection
-    elif db_conn_creds.drivername == DatabaseDriverName.CACHE.value:
+    elif db_creds.drivername == DatabaseDriverName.CACHE:
         raise NotImplementedError('Cache database engine is not yet implemented')
-    logging.info(f"Connection to '{db_conn_creds.database}' database established successfully")
+    else:
+        raise ValueError(f"The engine '{db_creds.drivername}' is unknown")
+    logging.info(f"Connection to '{db_creds.database}' database established successfully")
 
     return db_engine
 
-def save_extraction_file(dataframe: pd.DataFrame, output: Path, file_name: str) -> None:
+def save_extraction_file(dataframe: pd.DataFrame, output: Path, file_name: str, file_format: FileFormat) -> None:
     output.mkdir(parents=True, exist_ok=True)
-    file_format = file_name.split('.')[-1]
-    if file_format == FileFormat.PARQUET.value:
+    file_name: str = f'{file_name}.{file_format.value}'
+    if file_format == FileFormat.PARQUET:
         dataframe.to_parquet(path=output/file_name, index=False)
-    elif file_format == FileFormat.CSV.value:
+    elif file_format == FileFormat.CSV:
         dataframe.to_csv(path_or_buf=output/file_name, index=False)
     else:
         raise ValueError(f"Extraction file format '{file_format}' is invalid, please check file format task parameter")
 
-def extract_from_database(db_task_params: DatabaseTaskParameters, con: create_engine) -> None:
+def extract_from_database(sql: str, conn: create_engine, chunk_size: int | None) -> None:
     sql_result = pd.read_sql(
-        sql=db_task_params.sql, 
-        con=con, 
-        chunksize=db_task_params.chunk_size
+        sql=sql,
+        con=conn,
+        chunksize=chunk_size
     )
-    data_iterator: Iterator = sql_result if db_task_params.chunk_size else [sql_result]
-    extraction_ts = now().strftime('%Y%m%d%H%M%S')
-    for i, chunk in enumerate(data_iterator):
+    data_iterator: Iterator = sql_result if chunk_size else [sql_result]
+
+    return data_iterator
+
+def handler(**kwargs) -> None:
+    params: TaskParameters = TaskParameters(**kwargs)
+    conn: create_engine = establish_database_connection(
+        db_creds=DatabaseConnectionCredentials(
+            **load_toml_creds().get(params.dbcreds)
+        )
+    )
+    data: Iterator = extract_from_database(
+        sql=params.sql, 
+        conn=conn, 
+        chunk_size=params.chunk_size
+    )
+    for i, chunk in enumerate(data):
         # only add suffix if we are actually chunking
-        suffix = f'_{i}' if db_task_params.chunk_size else ''
+        suffix: str = f'_{i}' if params.chunk_size else ''
         save_extraction_file(
             dataframe=chunk,
-            output=db_task_params.output,
-            file_name=f"{extraction_ts}{suffix}.{db_task_params.file_format}"
+            output=params.output,
+            file_name=params.data_interval_start.strftime('%Y%m%d%H%M%S') + suffix,
+            file_format = params.file_format
         )
-
-def handler(dbcreds: str, sql: str, output: Path, file_format: FileFormat = FileFormat.PARQUET.value, chunk_size: int | None = None) -> None:
-    db_task_params: DatabaseTaskParameters = DatabaseTaskParameters(
-        dbcreds=dbcreds,
-        sql=sql,
-        output=Path(output),
-        file_format=file_format,
-        chunk_size=chunk_size
-    )
-    db_connection: create_engine = establish_database_connection(
-        DatabaseConnectionCredentials(
-            **load_toml_creds().get(db_task_params.dbcreds)
-        )
-    )
-    extract_from_database(db_task_params=db_task_params, con=db_connection)

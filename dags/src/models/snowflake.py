@@ -1,57 +1,44 @@
 import logging
 from typing import Any
+from pydantic import ConfigDict, dataclasses, Field
 import snowflake.connector
-from snowflake.connector.pandas_tools import write_pandas
-from dataclasses import dataclass
 from ..utils.load_toml_creds import load_toml_creds
 
-@dataclass
-class SnowflakeTaskParameters:
-    dbcreds: str
-    sql: str
-    sql_params: dict[str, Any] | None
+@dataclasses.dataclass
+class TaskParameters:
+    dbcreds: str = Field(description='Snowflake connection section name in TOML file. With all necessary parameters for SF connection')
+    sql: str = Field(description='Query or the SQL file path to be executed')
+    sql_params: dict[str, Any] | None = Field(default=None, description='Args for replacing variables between double curly braces in SQL file scripts')
 
-@dataclass
-class SnowflakeConnectionCredentials:
-    authenticator: str
-    user: str
-    role: str
-    account: str
-    private_key_file: str
-    private_key_file_pwd: str
-    warehouse: str
-
-def execute_query(conn: snowflake.connector, sql: str) -> None:
+def execute_query_or_sql_file(conn: snowflake.connector, sql: str) -> None:
     with conn.cursor() as cursor:
         logging.info(f'Executing query: {sql}')
         cursor.execute(sql)
 
-def format_sql(sql: str, sql_params: dict[str, Any] | None) -> None:
-    if sql.endswith('.sql') and sql_params is None:
-        Exception("Parameter 'sql_params' must be passed only when 'sql' is a SQL file path")
-
-    # check if the parameter sql is a sql file path or string sql script
-    if sql.endswith('.sql'):
-        with open(file=sql, mode='r') as f:
-            sql = f.read()
+def replace_args_placeholders_by_args(sql: str, sql_params: dict[str, Any] | None) -> str:
+    if sql_params:
         for param, value in sql_params.items():
             # replace all {{keys}} references with the respectivee values passed in sql_params
             # e.g. sql: SELECT {{param}}, sql_params={'param': 'test'} -> SELECT test
             sql = sql.replace(f'{{{{{param}}}}}', value)
     return sql
 
-def handler(dbcreds: str, sql: str, sql_params: dict[str, Any] | None = None) -> None:
-    sf_task_params: SnowflakeTaskParameters = SnowflakeTaskParameters(
-        dbcreds=dbcreds,
-        sql=sql,
-        sql_params=sql_params
-    )
+def format_sql(sql: str, sql_params: dict[str, Any] | None) -> str:
+    # check if the parameter sql is a sql file path or string sql script
+    if sql.endswith('.sql'):
+        with open(file=sql, mode='r') as f:
+            sql = f.read()
+    sql: str = replace_args_placeholders_by_args(sql=sql, sql_params=sql_params)    
+    return sql
 
-    sql = format_sql(sql=sql, sql_params=sql_params)
-
-    sf_connection = snowflake.connector.connect(
-        **load_toml_creds().get(sf_task_params.dbcreds),
+def handler(**kwargs) -> None:
+    params: TaskParameters = TaskParameters(**kwargs)
+    sql = format_sql(sql=params.sql, sql_params=params.sql_params)
+    conn = snowflake.connector.connect(
+        **load_toml_creds().get(params.dbcreds),
         client_session_keep_alive=True
     )
-
-    execute_query(conn=sf_connection, sql=sql)
+    # TO DO:
+    # WRITE FILES IN SNOWFLAKE
+    # TEST APPROACH USING PANDAS TO WRITE DATA
+    execute_query_or_sql_file(conn=conn, sql=sql)
