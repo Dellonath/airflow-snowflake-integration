@@ -4,7 +4,7 @@ from pydantic import ConfigDict, dataclasses, Field
 import snowflake.connector
 from ..utils.load_toml_creds import load_toml_creds
 
-@dataclasses.dataclass
+@dataclasses.dataclass(config=ConfigDict(extra='ignore'))
 class TaskParameters:
     dbcreds: str = Field(description='Snowflake connection section name in TOML file. With all necessary parameters for SF connection')
     sql: str = Field(description='Query or the SQL file path to be executed')
@@ -15,7 +15,7 @@ def execute_query_or_sql_file(conn: snowflake.connector, sql: str) -> None:
         logging.info(f'Executing query: {sql}')
         cursor.execute(sql)
 
-def replace_args_placeholders_by_args(sql: str, sql_params: dict[str, Any] | None) -> str:
+def __replace_args_placeholders_by_args(sql: str, sql_params: dict[str, Any] | None) -> str:
     if sql_params:
         for param, value in sql_params.items():
             # replace all {{keys}} references with the respectivee values passed in sql_params
@@ -28,17 +28,14 @@ def format_sql(sql: str, sql_params: dict[str, Any] | None) -> str:
     if sql.endswith('.sql'):
         with open(file=sql, mode='r') as f:
             sql = f.read()
-    sql: str = replace_args_placeholders_by_args(sql=sql, sql_params=sql_params)    
+    sql: str = __replace_args_placeholders_by_args(sql=sql, sql_params=sql_params)    
     return sql
 
 def handler(**kwargs) -> None:
     params: TaskParameters = TaskParameters(**kwargs)
-    sql = format_sql(sql=params.sql, sql_params=params.sql_params)
-    conn = snowflake.connector.connect(
-        **load_toml_creds().get(params.dbcreds),
-        client_session_keep_alive=True
-    )
-    # TO DO:
-    # WRITE FILES IN SNOWFLAKE
-    # TEST APPROACH USING PANDAS TO WRITE DATA
-    execute_query_or_sql_file(conn=conn, sql=sql)
+    # sql = format_sql(sql=params.sql, sql_params=params.sql_params)
+    # conn = snowflake.connector.connect(
+    #     **load_toml_creds().get(params.dbcreds),
+    #     client_session_keep_alive=True
+    # )
+    # execute_query_or_sql_file(conn=conn, sql=sql)
